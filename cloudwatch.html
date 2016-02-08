@@ -1,0 +1,119 @@
+<html>
+<meta http-equiv="Cache-Control" content="no-store" />
+<head>
+  <title>AWS CloudWatch Connector</title>
+  <script src="https://online.tableau.com/javascripts/api/tableauwdc-1.1.0.js" type="text/javascript"></script>
+  <script src="./scripts/jquery-2.2.0.min.js" type="text/javascript"></script>
+  <script src="./scripts/aws-sdk-2.2.33.min.js" type="text/javascript"></script>
+  <script type="text/javascript">
+
+  (function() {
+    var myConnector = tableau.makeConnector();
+  
+    function queryCloudWatch(username, secret, starttime, endtime, metricname, namespace, dimensionname, dimensionvalue, unit, period) {
+      AWS.config.update({accessKeyId: username, secretAccessKey: secret});
+      AWS.config.region = 'us-west-2';
+      var cloudwatch = new AWS.CloudWatch();
+      
+      var params = {
+        StartTime: starttime,
+        EndTime: endtime,
+        Namespace: namespace,
+        MetricName: metricname,
+        Period: period,
+        Statistics: [ 'Average' ],
+        Dimensions: [{
+          Name: dimensionname,
+          Value: dimensionvalue
+        }
+      ],
+        Unit: unit
+      };
+      var request = cloudwatch.getMetricStatistics(params)
+      
+      request.
+        on('success', function(data){
+          var lastRecordToken = 0;
+          tableau.dataCallback(data['data']['Datapoints'], lastRecordToken.toString(), true);
+        }).
+        on('error', function(err, data) {
+          tableau.abortWithError("Connection error " + err + "\nStack is: " + err.stack); // an error occurred
+        }).
+        on('complete', function(data) {
+          var lastRecordToken = 0;
+          tableau.dataCallback(data['data']['Datapoints'], lastRecordToken.toString(), false);
+        }).
+        send();
+    }
+
+    myConnector.getColumnHeaders = function() {
+      var fieldNames = ['Timestamp', 'Average', 'Unit'];
+      var fieldTypes = ['datetime', 'float', 'string'];
+      tableau.headersCallback(fieldNames, fieldTypes);
+    }
+
+    myConnector.getTableData = function(lastRecordToken) {
+      config = JSON.parse(tableau.connectionData)
+      myResponse = queryCloudWatch(
+        tableau.username, 
+        tableau.password, 
+        config['starttime'], 
+        config['endtime'], 
+        config['metricname'], 
+        config['namespace'], 
+        config['dimensionname'], 
+        config['dimensionvalue'],
+        config['unit'],
+        config['period']);
+    }
+
+    tableau.registerConnector(myConnector);
+  })();
+
+    $(document).ready(function() {
+    $("#submitButton").click(function() {
+      var akid  = $('#akid').val().trim();
+      var secret = $('#secret').val().trim();
+      var metricname = $('#metricname').val().trim();
+      var namespace = $('#namespace').val().trim();
+      var dimensionname = $('#dimensionname').val().trim();
+      var dimensionvalue = $('#dimensionvalue').val().trim();
+      var starttime = new Date($('#starttime').val().trim());
+      var endtime = new Date($('#endtime').val().trim());
+      var unit = $('#unit').val().trim();
+      var period = parseInt($('#period').val().trim());
+      if (metricname) {
+        tableau.username = akid;
+        tableau.password = secret;
+        tableau.connectionName = "AWS Data for " + metricname;
+        tableau.connectionData = JSON.stringify({
+          'metricname': metricname,
+          'namespace': namespace,
+          'dimensionname': dimensionname,
+          'dimensionvalue': dimensionvalue,
+          'starttime': starttime,
+          'endtime': endtime,
+          'period': period,
+          'unit': unit
+        });
+        tableau.submit();
+      }
+    });
+  });
+
+  </script>
+</head>
+<body>
+  <p>Enter the AWS access key: <input type="text" id="akid"></p>
+  <p>Enter the AWS secret key: <input type="password" id="secret"></p>
+  <p>Enter a namespace: <input type="text" id="namespace" value="Logstash"></p>
+  <p>Enter a metric name: <input type="text" id="metricname" value="EventRate"></p>
+  <p>Enter a dimension name: <input type="text" id="dimensionname" value="Name"></p>
+  <p>Enter a dimension value: <input type="text" id="dimensionvalue" value="mylss1instance"></p>
+  <p>Enter the start time: <input type="datetime-local" id="starttime" value="2016-02-02"></p>
+  <p>Enter the end time: <input type="datetime-local" id="endtime" value="2016-02-04"></p>
+  <p>Enter the period: <input type="range" id="period" min="60" max="600" value="600"></p>
+  <p>Enter the unit: <input type="text" id="unit" value="Count"></p>
+  <p><button type="button" id="submitButton">Get the Data</button></p>
+</body>
+</html>
