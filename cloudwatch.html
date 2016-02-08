@@ -1,27 +1,42 @@
 <html>
 <meta http-equiv="Cache-Control" content="no-store" />
+<meta charset="UTF-8">
+
 <head>
   <title>AWS CloudWatch Connector</title>
+  
+  <!-- Tableau WDC -->
   <script src="https://online.tableau.com/javascripts/api/tableauwdc-1.1.0.js" type="text/javascript"></script>
+  <!-- JQuery - Just for @hrbrmstr -->
   <script src="./scripts/jquery-2.2.0.min.js" type="text/javascript"></script>
+  <!-- Minified AWS SDK with CloudWatch only  -->
   <script src="./scripts/aws-sdk-2.2.33.min.js" type="text/javascript"></script>
+  
   <script type="text/javascript">
 
   (function() {
     var myConnector = tableau.makeConnector();
+    
+    myConnector.init = function(){
+      tableau.incrementalExtractColumn = "Timestamp";
+      tableau.initCallback();
+    };
   
-    function queryCloudWatch(username, secret, starttime, endtime, metricname, namespace, dimensionname, dimensionvalue, unit, period) {
+    function queryCloudWatch(username, secret, region, starttime, endtime, 
+                             metricname, namespace, dimensionname, 
+                             dimensionvalue, unit, period, statistics) {
+      /* the main CloudWatch worker function */
       AWS.config.update({accessKeyId: username, secretAccessKey: secret});
-      AWS.config.region = 'us-west-2';
+      AWS.config.region = region;
       var cloudwatch = new AWS.CloudWatch();
-      
+
       var params = {
         StartTime: starttime,
         EndTime: endtime,
         Namespace: namespace,
         MetricName: metricname,
         Period: period,
-        Statistics: [ 'Average' ],
+        Statistics: statistics,
         Dimensions: [{
           Name: dimensionname,
           Value: dimensionvalue
@@ -30,9 +45,11 @@
         Unit: unit
       };
       var request = cloudwatch.getMetricStatistics(params)
-      
+
+      /* Invoke the call and take action based on the type of response */
       request.
         on('success', function(data){
+          /* iterate over all the returned data points */
           var lastRecordToken = 0;
           tableau.dataCallback(data['data']['Datapoints'], lastRecordToken.toString(), true);
         }).
@@ -40,6 +57,7 @@
           tableau.abortWithError("Connection error " + err + "\nStack is: " + err.stack); // an error occurred
         }).
         on('complete', function(data) {
+          /* no more data, so return that fact to the WDC */
           var lastRecordToken = 0;
           tableau.dataCallback(data['data']['Datapoints'], lastRecordToken.toString(), false);
         }).
@@ -47,16 +65,27 @@
     }
 
     myConnector.getColumnHeaders = function() {
-      var fieldNames = ['Timestamp', 'Average', 'Unit'];
-      var fieldTypes = ['datetime', 'float', 'string'];
+      // support for querying multiple stats at once is not well-tested
+      config = JSON.parse(tableau.connectionData);
+      var fieldNames = ['Timestamp'];
+      var fieldTypes = ['datetime'];
+      for (val of config['statistics']){
+        fieldNames.push(val);
+        fieldTypes.push('float');
+      };
+      fieldNames.push('Unit');
+      fieldTypes.push('string');
+      
       tableau.headersCallback(fieldNames, fieldTypes);
     }
 
     myConnector.getTableData = function(lastRecordToken) {
+      /* pull our config variables out of JSON and from Tableau WDC */
       config = JSON.parse(tableau.connectionData)
       myResponse = queryCloudWatch(
         tableau.username, 
         tableau.password, 
+        config['region'],
         config['starttime'], 
         config['endtime'], 
         config['metricname'], 
@@ -64,56 +93,136 @@
         config['dimensionname'], 
         config['dimensionvalue'],
         config['unit'],
-        config['period']);
+        config['period'],
+        config['statistics']);
     }
 
     tableau.registerConnector(myConnector);
   })();
 
     $(document).ready(function() {
-    $("#submitButton").click(function() {
-      var akid  = $('#akid').val().trim();
-      var secret = $('#secret').val().trim();
-      var metricname = $('#metricname').val().trim();
-      var namespace = $('#namespace').val().trim();
-      var dimensionname = $('#dimensionname').val().trim();
-      var dimensionvalue = $('#dimensionvalue').val().trim();
-      var starttime = new Date($('#starttime').val().trim());
-      var endtime = new Date($('#endtime').val().trim());
-      var unit = $('#unit').val().trim();
-      var period = parseInt($('#period').val().trim());
-      if (metricname) {
-        tableau.username = akid;
-        tableau.password = secret;
-        tableau.connectionName = "AWS Data for " + metricname;
-        tableau.connectionData = JSON.stringify({
-          'metricname': metricname,
-          'namespace': namespace,
-          'dimensionname': dimensionname,
-          'dimensionvalue': dimensionvalue,
-          'starttime': starttime,
-          'endtime': endtime,
-          'period': period,
-          'unit': unit
+      $("#submitButton").click(function() {
+        /* on submit, build our config settings from the form */
+        var akid  = $('#akid').val().trim();
+        var secret = $('#secret').val().trim();
+        var region = $('#region option:selected').val()
+        var metricname = $('#metricname').val().trim();
+        var namespace = $('#namespace').val().trim();
+        var dimensionname = $('#dimensionname').val().trim();
+        var dimensionvalue = $('#dimensionvalue').val().trim();
+        var starttime = new Date($('#starttime').val().trim());
+        var endtime = new Date($('#endtime').val().trim());
+        var unit = $('#unit').val().trim();
+        var period = parseInt($('#period').val().trim()) * 60;
+        var statistics = [];
+        $("#statistics:checked").each(function(){
+          statistics.push($(this).val());
         });
-        tableau.submit();
-      }
+        if (metricname) {
+          /* so long as one metricname was submitted, try to query AWS */
+          tableau.username = akid;
+          tableau.password = secret;
+          tableau.connectionName = "AWS Data for " + metricname;
+          tableau.connectionData = JSON.stringify({
+            'region': region,
+            'metricname': metricname,
+            'namespace': namespace,
+            'dimensionname': dimensionname,
+            'dimensionvalue': dimensionvalue,
+            'starttime': starttime,
+            'endtime': endtime,
+            'period': period,
+            'unit': unit,
+            'statistics': statistics
+          });
+          tableau.submit();
+        }
     });
   });
 
+  function printValue(sliderID, textbox) {
+    /* helper function to display value of slider */
+    var x = document.getElementById(textbox);
+    var y = document.getElementById(sliderID);
+    x.value = y.value;
+  }
+
+  window.onload = function() { printValue('period', 'periodValue');  }
+
   </script>
 </head>
+
 <body>
-  <p>Enter the AWS access key: <input type="text" id="akid"></p>
-  <p>Enter the AWS secret key: <input type="password" id="secret"></p>
-  <p>Enter a namespace: <input type="text" id="namespace" value="Logstash"></p>
-  <p>Enter a metric name: <input type="text" id="metricname" value="EventRate"></p>
-  <p>Enter a dimension name: <input type="text" id="dimensionname" value="Name"></p>
-  <p>Enter a dimension value: <input type="text" id="dimensionvalue" value="mylss1instance"></p>
-  <p>Enter the start time: <input type="datetime-local" id="starttime" value="2016-02-02"></p>
-  <p>Enter the end time: <input type="datetime-local" id="endtime" value="2016-02-04"></p>
-  <p>Enter the period: <input type="range" id="period" min="60" max="600" value="600"></p>
-  <p>Enter the unit: <input type="text" id="unit" value="Count"></p>
+  <fieldset>
+    <!-- settings for the AWS connection -->
+    <legend>AWS Access Details</legend>
+    <label for="akid">AWS access key</label><input type="text" id="akid"></p>
+    <label for="secret">AWS secret key</label><input type="password" id="secret"></p>
+    <label for="region">AWS region</label><select id="region">
+      <option value="us-east-1">us-east-1 (Standard)</option>
+      <option value="us-west-1">us-west-1</option>
+      <option value="us-west-2" selected>us-west-2</option>
+      <option value="eu-west-1">eu-west-1</option>
+      <option value="eu-central-1">eu-central-1</option>
+      <option value="sa-east-1">sa-east-1</option>
+      <option value="ap-northeast-1">ap-northeast-1</option>
+      <option value="ap-northeast-2">ap-northeast-2</option>
+      <option value="ap-southeast-1">ap-southeast-1</option>
+      <option value="ap-southeast-2">ap-southeast-2</option>
+    </select></p>
+  </fieldset>
+  <fieldset>
+    <!-- CloudWatch specific settings -->
+    <legend>CloudWatch Metric Specifications</legend>
+    <div>
+      <label for="namespace">Namespace</label>
+      <input type="text" id="namespace" value="Logstash">
+    </div>
+    <div>
+      <label for="metricname">Metric name</label>
+      <input type="text" id="metricname" value="EventRate">
+    </div>
+    <div>
+      <label for="dimensionname">Dimension name</label>
+      <input type="text" id="dimensionname" value="Name">
+    </div>
+    <div>
+      <label for="dimensionvalue">Dimension value</label>
+      <input type="text" id="dimensionvalue" value="mylss1instance">
+    </div>
+    <div>
+      <label for="starttime">Start time</label><input type="datetime-local" id="starttime" value="2016-02-02">
+    </div>
+    <div>
+      <label for="endtime">End time</label><input type="datetime-local" id="endtime" value="2016-02-04">
+    </div>
+    <div>
+      <label for="period">Sample period (in minutes)</label>
+      <input type="range" id="period" min="1" max="1440" value="1" step="1" 
+        onchange="printValue('period','periodValue')">
+      <input type="text" id="periodValue" readonly>
+    </div>
+    <div>
+      <label for="unit">Unit</label><input type="text" id="unit" value="Count">
+    <div>
+      <label for="statistics">Statistic</label>
+      <div class="checkbox">
+        <input type="checkbox" id="statistics" name="statistics" value="Maximum">Maximum</input>
+      </div>
+      <div class="checkbox">
+        <input type="checkbox" id="statistics" name="statistics" value="Minimum">Minimum</input>
+      </div>
+      <div class="checkbox">
+        <input type="checkbox" id="statistics" name="statistics" value="Average" checked>Average</input>
+      </div>
+      <div class="checkbox">
+        <input type="checkbox" id="statistics" name="statistics" value="Sum">Sum</input>
+      </div>
+      <div class="checkbox">
+        <input type="checkbox" id="statistics" name="statistics" value="SampleCount">Sample Count</input>
+      </div>
+    </div>
+  </fieldset>
   <p><button type="button" id="submitButton">Get the Data</button></p>
 </body>
 </html>
