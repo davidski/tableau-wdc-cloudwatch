@@ -13,16 +13,16 @@ function cwWdcInitialize() {
     for (var i = 0; i < config['statistics'].length; ++i){
       fieldNames.push(config['statistics'][i]);
       fieldTypes.push('float');
-    };
+    }
     fieldNames.push('Unit');
     fieldTypes.push('string');
-    
+
     tableau.headersCallback(fieldNames, fieldTypes);
-  }
+  };
 
   myConnector.getTableData = function(lastRecordToken) {
     // pull our config variables out of JSON and from Tableau WDC
-    config = JSON.parse(tableau.connectionData)
+    config = JSON.parse(tableau.connectionData);
     myResponse = queryCloudWatch(
       lastRecordToken,
       tableau.username, 
@@ -37,12 +37,12 @@ function cwWdcInitialize() {
       config['unit'],
       config['period'],
       config['statistics']);
-  }
+  };
 
   tableau.registerConnector(myConnector);
   console.log("Connector now registered.");
 
-};
+}
 
 
 function queryCloudWatch(lastRecordToken, username, secret, region, 
@@ -69,7 +69,7 @@ function queryCloudWatch(lastRecordToken, username, secret, region,
   ],
     Unit: unit
   };
-  var request = cloudwatch.getMetricStatistics(params)
+  var request = cloudwatch.getMetricStatistics(params);
 
   /* Invoke the call and take action based on the type of response */
   request.
@@ -84,15 +84,14 @@ function queryCloudWatch(lastRecordToken, username, secret, region,
                            err.stack); // an error occurred
   }).
   send();
-
-};
+}
 
 function printValue(sliderID, textbox) {
   /* helper function to display value of slider */
   var x = document.getElementById(textbox);
   var y = document.getElementById(sliderID);
   x.value = y.value;
-};
+}
 
 // pure JS version of jQuery documentready function
 function ready(fn) {
@@ -101,7 +100,7 @@ function ready(fn) {
   } else {
     document.addEventListener('DOMContentLoaded', fn);
   }
-};
+}
 
 ready(function(){
   //prepare the Tableau WDC functions
@@ -114,7 +113,7 @@ ready(function(){
     /* on submit, build our config settings from the form */
     var akid  = document.querySelector("#akid").value.trim();
     var secret = document.querySelector('#secret').value.trim();
-    var e = document.querySelector("#region")
+    var e = document.querySelector("#region");
     var region = e[e.selectedIndex].value;
     var metricname = document.querySelector('#metricname').value.trim();
     var namespace = document.querySelector('#namespace').value.trim();
@@ -123,13 +122,13 @@ ready(function(){
     var starttime = new Date(document.querySelector('#starttime').value.trim());
     var endtime = new Date(document.querySelector('#endtime').value.trim());
     var unit = document.querySelector('#unit').value.trim();
-    var period = parseInt(document.querySelector('#period').value.trim()) * 60;
+    var period = parseInt(document.querySelector('#period').value.trim(), 10) * 60;
     var statistics = [];
     var checkboxes = document.querySelectorAll("#statistics");
     Array.prototype.forEach.call(checkboxes, function(el, i){
-      if (el.checked = true) {
+      if (el.checked === true) {
         statistics.push(el.value);
-      };
+      }
     });
     if (metricname) {
       /* so long as one metricname was submitted, try to query AWS */
@@ -157,4 +156,4 @@ ready(function(){
   
 });
 
-window.onload = function() { printValue('period', 'periodValue');  }
+window.onload = function() { printValue('period', 'periodValue');  };

@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html>
-<meta http-equiv="Cache-Control" content="no-store" />
-<meta charset="UTF-8">
+
 
 <head>
+  <meta http-equiv="Cache-Control" content="no-store" />
+  <meta charset="UTF-8">
   <title>AWS CloudWatch Connector</title>
-  <style text="text/css">
+  <style type="text/css">
     body {
       font-size: 1em !important;
       color: #000 !important;
@@ -112,22 +113,23 @@
     </div>
     <div>
       <label for="unit">Unit</label><input type="text" id="unit" value="Count">
+    </div>
     <div>
       <label for="statistics">Statistic</label>
       <div class="checkbox">
-        <input type="checkbox" id="statistics" name="statistics" value="Average" checked>Average</input>
+        <input type="checkbox" id="statistics" name="statistics" value="Average" checked><label>Average</label>
       </div>
       <div class="checkbox">
-        <input type="checkbox" id="statistics" name="statistics" value="Maximum">Maximum</input>
+        <input type="checkbox" id="statistics" name="statistics" value="Maximum"><label>Maximum</label>
       </div>
       <div class="checkbox">
-        <input type="checkbox" id="statistics" name="statistics" value="Minimum">Minimum</input>
+        <input type="checkbox" id="statistics" name="statistics" value="Minimum"><label>Minimum</label>
       </div>
       <div class="checkbox">
-        <input type="checkbox" id="statistics" name="statistics" value="SampleCount">Sample Count</input>
+        <input type="checkbox" id="statistics" name="statistics" value="SampleCount"><label>Sample Count</label>
       </div>     
       <div class="checkbox">
-        <input type="checkbox" id="statistics" name="statistics" value="Sum">Sum</input>
+        <input type="checkbox" id="statistics" name="statistics" value="Sum"><label>Sum</label>
       </div>
     </div>
   </fieldset>
