@@ -25,9 +25,7 @@
   </style>
   
   <!-- Tableau SDK -->
-  <script src="https://online.tableau.com/javascripts/api/tableauwdc-1.1.0.js" type="text/javascript"></script>
-  <!-- JQuery - Just for @hrbrmstr -->
-  <script src="./scripts/jquery-2.2.0.min.js" type="text/javascript"></script>
+  <script src="./scripts/tableauwdc-1.1.0.js" type="text/javascript"></script>
   <!-- Minified AWS SDK with CloudWatch only -->
   <script src="./scripts/aws-sdk-2.2.33.min.js" type="text/javascript"></script>
   <!-- CloudWatch WDC -->
@@ -108,7 +106,7 @@
     <div>
       <label for="period">Sample period (in minutes)</label>
       <!-- <input type="text" id="period" value="5"> -->
-      <input type="range" id="period" min="1" max="1440" value="1" step="1" 
+      <input type="range" id="period" min="1" max="1440" value="5" step="1" 
         onchange="printValue('period','periodValue')">
       <input type="text" id="periodValue" readonly>
     </div>
@@ -117,19 +115,19 @@
     <div>
       <label for="statistics">Statistic</label>
       <div class="checkbox">
+        <input type="checkbox" id="statistics" name="statistics" value="Average" checked>Average</input>
+      </div>
+      <div class="checkbox">
         <input type="checkbox" id="statistics" name="statistics" value="Maximum">Maximum</input>
       </div>
       <div class="checkbox">
         <input type="checkbox" id="statistics" name="statistics" value="Minimum">Minimum</input>
       </div>
       <div class="checkbox">
-        <input type="checkbox" id="statistics" name="statistics" value="Average" checked>Average</input>
-      </div>
+        <input type="checkbox" id="statistics" name="statistics" value="SampleCount">Sample Count</input>
+      </div>     
       <div class="checkbox">
         <input type="checkbox" id="statistics" name="statistics" value="Sum">Sum</input>
-      </div>
-      <div class="checkbox">
-        <input type="checkbox" id="statistics" name="statistics" value="SampleCount">Sample Count</input>
       </div>
     </div>
   </fieldset>
