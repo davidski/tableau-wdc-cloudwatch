@@ -14,8 +14,6 @@ function cwWdcInitialize() {
       fieldNames.push(config['statistics'][i]);
       fieldTypes.push('float');
     }
-    fieldNames.push('Unit');
-    fieldTypes.push('string');
 
     tableau.headersCallback(fieldNames, fieldTypes);
   };
@@ -32,9 +30,7 @@ function cwWdcInitialize() {
       config['endtime'], 
       config['metricname'], 
       config['namespace'], 
-      config['dimensionname'], 
-      config['dimensionvalue'],
-      config['unit'],
+      config['dimensions'], 
       config['period'],
       config['statistics']);
   };
@@ -44,11 +40,9 @@ function cwWdcInitialize() {
 
 }
 
-
 function queryCloudWatch(lastRecordToken, username, secret, region, 
-                         starttime, endtime, 
-                         metricname, namespace, dimensionname, 
-                         dimensionvalue, unit, period, statistics) {
+                         starttime, endtime, metricname, namespace, 
+                         dimensions, period, statistics) {
   /* the main CloudWatch worker function */
   AWS.config.update({accessKeyId: username, secretAccessKey: secret});
   AWS.config.region = region;
@@ -61,14 +55,12 @@ function queryCloudWatch(lastRecordToken, username, secret, region,
     Namespace: namespace,
     MetricName: metricname,
     Period: period,
-    Statistics: statistics,
-    Dimensions: [{
-      Name: dimensionname,
-      Value: dimensionvalue
-    }
-  ],
-    Unit: unit
+    Statistics: statistics
   };
+
+  //only add dimensions to the parameter if they've been requested
+  if (dimensions) { params['Dimensions'] = dimensions; }
+
   var request = cloudwatch.getMetricStatistics(params);
 
   /* Invoke the call and take action based on the type of response */
@@ -117,11 +109,22 @@ ready(function(){
     var region = e[e.selectedIndex].value;
     var metricname = document.querySelector('#metricname').value.trim();
     var namespace = document.querySelector('#namespace').value.trim();
+
+    // build dimensions
     var dimensionname = document.querySelector('#dimensionname').value.trim();
     var dimensionvalue = document.querySelector('#dimensionvalue').value.trim();
+    var dimensions = [{}]
+    if (dimensionname && dimensionvalue) {
+      dimensions = [{
+        Name: dimensionname,
+        Value: dimensionvalue
+      }];
+    } else {
+      dimensions = null
+    };
+
     var starttime = new Date(document.querySelector('#starttime').value.trim());
     var endtime = new Date(document.querySelector('#endtime').value.trim());
-    var unit = document.querySelector('#unit').value.trim();
     var period = parseInt(document.querySelector('#period').value.trim(), 10) * 60;
     var statistics = [];
     var checkboxes = document.querySelectorAll("#statistics");
@@ -139,12 +142,10 @@ ready(function(){
         'region': region,
         'metricname': metricname,
         'namespace': namespace,
-        'dimensionname': dimensionname,
-        'dimensionvalue': dimensionvalue,
+        'dimensions': dimensions,
         'starttime': starttime,
         'endtime': endtime,
         'period': period,
-        'unit': unit,
         'statistics': statistics
       });
       console.log("About to tableau.submit()");
@@ -156,4 +157,4 @@ ready(function(){
   
 });
 
-window.onload = function() { printValue('period', 'periodValue');  };
+window.onload = function() { printValue('period', 'periodValue'); };

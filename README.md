@@ -15,12 +15,15 @@ may be used for local testing)
 - Enter the details of the desired metric
 - Select `Get the Data`
 
+To query a metric without a dimension, leave the dimension name and value 
+fields blank.
+
 ## Note on AWS API Key Security 
 
-The use of AWS API credentials is required. While care is taken to use Tableau 
-standard functions for protecting username and passwords, it is possible to use 
-these same functions to store your credentials in the Tableau data 
-connection. This may not be what you want!
+The use of AWS API credentials is required. While care is taken to use 
+Tableau standard functions for protecting username and passwords, it is 
+possible to use these same functions to store your credentials in the Tableau 
+data connection. This may not be what you want!
 
 Using an IAM account with access restricted to just retrieving CloudWatch 
 metrics (IAM permission `Cloudwatch:GetMetricStatistics` is highly 
@@ -30,13 +33,12 @@ for this connector.
 ## Limitations
 
 - Multiple dimensions are not supported
-- Metrics without dimensions are not supported
 - Form styling is functional, but very minimal
 - Error handling is minimal
 
 ## Credits
 
-- Thanks to @hrbrmstr for pointers to:
+- Thanks to [@hrbrmstr](https://github.com/hrbrmstr) for pointers to:
   - the nifty [youmightnotneedjquery.com](http://youmightnotneedjquery.com/) 
     site.
   - the super useful [devd](https://github.com/cortesi/devd) cross-platform 
